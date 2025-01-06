@@ -71,3 +71,9 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+/bin
+/bin.meta
+/obj.meta
+/Temp.meta
+/FishNetAddressable.csproj.meta
+/FishNetAddressable.sln.meta

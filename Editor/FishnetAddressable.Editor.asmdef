@@ -1,0 +1,20 @@
+{
+    "name": "Fishnet.Addressable.Editor",
+    "rootNamespace": "Fishnet.Addressable.Editor",
+    "references": [
+        "GUID:0e0addedfe869af4a97b35d2b5c46704",
+        "GUID:69448af7b92c7f342b298e06a37122aa",
+        "GUID:7c88a4a7926ee5145ad2dfa06f454c67"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
