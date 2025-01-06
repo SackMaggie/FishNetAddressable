@@ -1,4 +1,4 @@
 # FishNetAddressable
 
 Unity package manager path
-``httpsgithub.comSackMaggieFishNetAddressable.git``
+``https://github.com/SackMaggie/FishNetAddressable.git``
