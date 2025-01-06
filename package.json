@@ -1,0 +1,32 @@
+{
+  "name": "com.sackmaggie.fishnetaddressable",
+  "version": "0.0.1",
+  "displayName": "FishNet Addressable",
+  "description": "",
+  "unity": "2021.3",
+  "documentationUrl": "https://fish-networking.gitbook.io/docs/",
+  "licensesUrl": "https://github.com/SackMaggie/FishNetAddressable/blob/master/LICENSE.txt",
+  "license": "See LICENSE.txt file",
+  "keywords": [
+    "FishNetworking",
+    "Networking",
+    "FishNet",
+    "Unity Networking"
+  ],
+  "author": {
+    "name": "SackMaggie",
+    "email": "athpon@gamil.com",
+    "url": "https://github.com/SackMaggie"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.ugui": "1.0.0",
+    "com.unity.modules.animation": "1.0.0",
+    "com.unity.modules.imgui": "1.0.0",
+    "com.unity.modules.particlesystem": "1.0.0",
+    "com.unity.modules.physics": "1.0.0",
+    "com.unity.modules.physics2d": "1.0.0",
+    "com.unity.modules.ui": "1.0.0",
+    "com.unity.addressables": "1.22.3"
+  }
+}
