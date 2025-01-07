@@ -3,6 +3,7 @@ using FishNet.Object;
 using GameKit.Dependencies.Utilities;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 #if UNITY_EDITOR
@@ -12,13 +13,15 @@ using UnityEditor.AddressableAssets.Settings;
 #endif
 using UnityEngine;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.UIElements;
+using UnityEngine.Serialization;
 
 namespace FishNet.Addressable.Runtime
 {
     [CreateAssetMenu(fileName = "AddressableNetworkPrefabHandler", menuName = "FishNet/Spawnable Prefabs/AddressableNetworkPrefabHandler")]
     public class AddressableNetworkPrefabHandler : SinglePrefabObjects
     {
+        private const string DefaultPrefabHandlerAssetPath = "Assets/AddressableNetworkPrefabHandler.asset";
+        public static AddressableNetworkPrefabHandler Instance => GetOrCreateAddressableNetworkPrefabHandler();
         [Tooltip("Assign default defaultPrefabObjects from FishNet, Which usually at Assets/DefaultPrefabObjects.asset")]
         public DefaultPrefabObjects defaultPrefabObjects;
         public bool autoGennerate = true;
@@ -44,10 +47,17 @@ namespace FishNet.Addressable.Runtime
 
         public override async void InitializePrefabRange(int startIndex)
         {
-            Debug.LogWarning($"InitializePrefabRange {startIndex}");
-            base.InitializePrefabRange(startIndex);
-            if (autoPreloadPrefab)
-                await PreloadAsset();
+            try
+            {
+                Debug.LogWarning($"InitializePrefabRange {startIndex}");
+                base.InitializePrefabRange(startIndex);
+                if (autoPreloadPrefab)
+                    await PreloadAsset();
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"AddressableNetworkPrefabHandler.InitializePrefabRange Error, Object may not be loaded", e);
+            }
         }
 
         public async Task PreloadAsset()
@@ -109,35 +119,68 @@ namespace FishNet.Addressable.Runtime
             }
         }
 
-        [ContextMenu(nameof(Gennerate))]
-        public void Gennerate()
+        private static AddressableNetworkPrefabHandler GetOrCreateAddressableNetworkPrefabHandler()
         {
+            AddressableNetworkPrefabHandler addressableNetworkPrefabHandler;
+            if (Application.isEditor && !Application.isPlaying)
+            {
 #if UNITY_EDITOR
+                if (!IsValidEditorState())
+                    return null;
+                addressableNetworkPrefabHandler = AssetDatabase.LoadAssetAtPath<AddressableNetworkPrefabHandler>(DefaultPrefabHandlerAssetPath);
+                if (addressableNetworkPrefabHandler == null)
+                {
+                    addressableNetworkPrefabHandler = ScriptableObject.CreateInstance<AddressableNetworkPrefabHandler>();
+                    AssetDatabase.CreateAsset(addressableNetworkPrefabHandler, DefaultPrefabHandlerAssetPath);
+                    AssetDatabase.SaveAssets();
+                    AssetDatabase.Refresh();
+                    Debug.Log("AddressableNetworkPrefabHandler created");
+                }
+
+                if (addressableNetworkPrefabHandler.defaultPrefabObjects == null)
+                {
+                    ///Path for DefaultPrefabObjects.asset which stored in <see cref="FishNet.Configuring.PrefabGeneratorConfigurations"/>
+                    ///<see cref="FishNet.Configuring.PrefabGeneratorConfigurations.DefaultPrefabObjectsPath_Platform"/>
+                    ///Which is an internal access, so we need to manually set it
+                    string assetPath = Path.Combine("Assets", "DefaultPrefabObjects.asset");
+                    addressableNetworkPrefabHandler.defaultPrefabObjects = AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(assetPath);
+                    UnityEditor.EditorUtility.SetDirty(addressableNetworkPrefabHandler);
+                }
+#else
+                addressableNetworkPrefabHandler = null;
+#endif
+            }
+            else
+            {
+                addressableNetworkPrefabHandler = Resources.Load<AddressableNetworkPrefabHandler>(DefaultPrefabHandlerAssetPath);
+            }
+
+            return addressableNetworkPrefabHandler;
+        }
+
+#if UNITY_EDITOR
+        [MenuItem("Tools/Fish-Networking/Addressable/Gennerate", validate = false)]
+        public static void Gennerate()
+        {
             try
             {
-
-#if PARRELSYNC
-                if (ParrelSync.ClonesManager.IsClone())
-                    return;
-#endif
-                if (Application.isPlaying)
+                if (!IsValidEditorState())
                     return;
 
-                /* Don't iterate if updating or compiling as that could cause an infinite loop
-                 * due to the prefabs being generated during an update, which causes the update
-                 * to start over, which causes the generator to run again, which... you get the idea. */
-                if (EditorApplication.isCompiling)
+                AddressableNetworkPrefabHandler prefabHandlerInstance = Instance;
+                if (prefabHandlerInstance == null)
                     return;
 
-                if (this == null)
-                    return;
+                DefaultPrefabObjects defaultPrefabObjects = prefabHandlerInstance.defaultPrefabObjects;
+                List<EntryWrapper> assetReferences = prefabHandlerInstance.assetReferences;
+                ushort CollectionId = prefabHandlerInstance.CollectionId;
 
                 if (defaultPrefabObjects == null)
                     throw new NullReferenceException("defaultPrefabObjects not exist");
 
                 for (int i = 0; i < assetReferences.Count; i++)
                 {
-                    if (assetReferences[i] == null || assetReferences[i].NonAddressableNob == null)
+                    if (assetReferences[i] == null || assetReferences[i].NetworkObjectPrefab == null)
                     {
                         assetReferences.RemoveAt(i);
                         i--;
@@ -145,17 +188,20 @@ namespace FishNet.Addressable.Runtime
                 }
                 foreach (NetworkObject nob in defaultPrefabObjects.Prefabs)
                 {
-                    EntryWrapper item = assetReferences.Find(x => x.NonAddressableNob == nob);
+                    if (nob == null)
+                        continue;
+                    EntryWrapper item = assetReferences.Find(x => x.NetworkObjectPrefab == nob);
                     if (item == null)
                     {
                         item = new EntryWrapper(nob, CollectionId);
                         assetReferences.Add(item);
-                        UnityEditor.EditorUtility.SetDirty(this);
+                        UnityEditor.EditorUtility.SetDirty(prefabHandlerInstance);
                     }
+                    item.Validate();
                 }
                 foreach (EntryWrapper item in assetReferences)
                 {
-                    AssetDatabase.SaveAssetIfDirty(item.NonAddressableNob);
+                    AssetDatabase.SaveAssetIfDirty(item.NetworkObjectPrefab);
                 }
                 Debug.Log($"{nameof(AddressableNetworkPrefabHandler)} found {assetReferences.Count} prefabs");
             }
@@ -163,104 +209,160 @@ namespace FishNet.Addressable.Runtime
             {
                 throw;
             }
-#endif
         }
+#endif
 
-        [Serializable]
-        public class EntryWrapper
-        {
-            [SerializeField] private ushort prefabId;
-            [SerializeField] private string assetPath;
-            [SerializeField] private bool isAddressable;
-            [SerializeField] private AssetReferenceNetworkObject assetReference;
-            [SerializeField] private AsyncOperationHandle<NetworkObject> handle;
-            [SerializeField] private AsyncOperationStatus status = AsyncOperationStatus.None;
-            [SerializeField] private NetworkObject nonAddressableNob;
-
-            public EntryWrapper(NetworkObject nonAddressableNob, ushort collectionId)
-            {
-                CollectionId = collectionId;
-                NonAddressableNob = nonAddressableNob;
-
-                EditorValidate();
-            }
-
-            public bool IsAddressable { get => isAddressable; private set => isAddressable = value; }
-            public ushort CollectionId { get; private set; }
-            public ushort PrefabId { get => prefabId; private set => prefabId = value; }
-            public string Guid { get; private set; }
-            public NetworkObject NonAddressableNob { get => nonAddressableNob; private set => nonAddressableNob = value; }
-            public AssetReferenceNetworkObject AssetReference { get => assetReference; private set => assetReference = value; }
-            public string AssetPath { get => assetPath; private set => assetPath = value; }
-
-            public NetworkObject GetNetworkObject()
-            {
-                return IsAddressable ? handle.Status == AsyncOperationStatus.Succeeded ? handle.Result : null : NonAddressableNob;
-            }
-
-            public Task PreloadAddressableAsset()
-            {
-                try
-                {
-                    Debug.Log($"PreloadAddressableAsset {PrefabId} {AssetPath}");
-                    if (!IsAddressable)
-                        return Task.CompletedTask;
-                    if (!handle.IsValid())
-                    {
-                        handle = AssetReference.LoadAssetAsync();
-                        handle.Completed += Handle_Completed;
-                    }
-                    return handle.Task;
-
-                    void Handle_Completed(AsyncOperationHandle<NetworkObject> handle)
-                    {
-                        try
-                        {
-                            status = handle.Status;
-                            if (handle.Status == AsyncOperationStatus.Succeeded)
-                                ManagedObjects.InitializePrefab(handle.Result, PrefabId, CollectionId);
-                            else
-                                Debug.LogError("Fail Getting NetworkObject from addressable");
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.LogException(e);
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e);
-                    return Task.CompletedTask;
-                }
-            }
-
-            public override string ToString()
-            {
-                return $"PrefabId={PrefabId}\tIsAddressable={IsAddressable}\tStatus={status}\tHandleValid={handle.IsValid()}\tAssetPath={AssetPath}";
-            }
-
-            private void EditorValidate()
-            {
 #if UNITY_EDITOR
-                AssetPath = AssetDatabase.GetAssetPath(NonAddressableNob);
-                string guid = AssetDatabase.AssetPathToGUID(AssetPath, AssetPathToGUIDOptions.OnlyExistingAssets);
-                PrefabId = AssetPath.GetStableHashU16();
-                AddressableAssetEntry addressableAssetEntry = AddressableAssetSettingsDefaultObject.Settings.FindAssetEntry(guid, true);
-                IsAddressable = addressableAssetEntry != null;
+        [MenuItem("Tools/Fish-Networking/Addressable/ForceSetPrefabId", validate = false)]
+        public static void ForceSetPrefabId()
+        {
+            if (!IsValidEditorState())
+                return;
 
-                Guid = guid;
-                if (IsAddressable)
-                    AssetReference = new AssetReferenceNetworkObject(guid);
-                //Debug.Log($"{PrefabId} {AssetPath}");
-                EditorUtility.SetDirty(NonAddressableNob);
-                ManagedObjects.InitializePrefab(NonAddressableNob, PrefabId, CollectionId);
-                //Debug.Log($"Result {NonAddressableNob.PrefabId} {AssetPath}");
-#endif
+            foreach (EntryWrapper item in Instance.assetReferences)
+            {
+                NetworkObject networkObjectPrefab = item.NetworkObjectPrefab;
+                ushort prefabId = networkObjectPrefab.PrefabId;
+                ManagedObjects.InitializePrefab(networkObjectPrefab, prefabId, Instance.CollectionId);
             }
-
-            public AsyncOperationHandle<NetworkObject> GetAsyncOperationHandle() => IsAddressable ? handle : throw new InvalidOperationException("This Entry is not addressable or loading is not begin");
         }
+#endif
+
+#if UNITY_EDITOR
+        public static bool IsValidEditorState()
+        {
+#if PARRELSYNC
+            if (ParrelSync.ClonesManager.IsClone())
+                return false;
+#endif
+            if (Application.isPlaying)
+                return false;
+
+            if (!Application.isEditor)
+                return false;
+#if UNITY_EDITOR
+            if (EditorApplication.isCompiling)
+                return false;
+
+            if (EditorApplication.isUpdating)
+                return false;
+
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return false;
+
+            return true;
+#else
+            return false;
+#endif
+        }
+#endif
+    }
+
+    [Serializable]
+    public class EntryWrapper
+    {
+        [SerializeField] private ushort prefabId;
+        [SerializeField] private string assetPath;
+        [SerializeField] private bool isAddressable;
+        [SerializeField] private AssetReferenceNetworkObject assetReference;
+        [SerializeField] private AsyncOperationHandle<NetworkObject> handle;
+        [SerializeField] private AsyncOperationStatus status = AsyncOperationStatus.None;
+        [FormerlySerializedAs("nonAddressableNob")][SerializeField] private NetworkObject networkObjectPrefab;
+
+        public EntryWrapper(NetworkObject networkObjectPrefab, ushort collectionId)
+        {
+            CollectionId = collectionId;
+            NetworkObjectPrefab = networkObjectPrefab;
+        }
+
+        public bool IsAddressable { get => isAddressable; private set => isAddressable = value; }
+        public ushort CollectionId { get; private set; }
+        public ushort PrefabId { get => prefabId; private set => prefabId = value; }
+        public string Guid { get; private set; }
+        [Obsolete("Renamed to NetworkObjectPrefab", true)]
+        public NetworkObject NonAddressableNob => NetworkObjectPrefab;
+        public NetworkObject NetworkObjectPrefab { get => networkObjectPrefab; private set => networkObjectPrefab = value; }
+        public AssetReferenceNetworkObject AssetReference { get => assetReference; private set => assetReference = value; }
+        public string AssetPath { get => assetPath; private set => assetPath = value; }
+
+        public NetworkObject GetNetworkObject()
+        {
+            return IsAddressable ? handle.Status == AsyncOperationStatus.Succeeded ? handle.Result : null : NetworkObjectPrefab;
+        }
+
+        public Task PreloadAddressableAsset()
+        {
+            try
+            {
+                Debug.Log($"PreloadAddressableAsset {PrefabId} {AssetPath}");
+                if (!IsAddressable)
+                    return Task.CompletedTask;
+                if (!handle.IsValid())
+                {
+                    handle = AssetReference.LoadAssetAsync();
+                    handle.Completed += Handle_Completed;
+                }
+                return handle.Task;
+
+                void Handle_Completed(AsyncOperationHandle<NetworkObject> handle)
+                {
+                    try
+                    {
+                        status = handle.Status;
+                        if (handle.Status == AsyncOperationStatus.Succeeded)
+                            ManagedObjects.InitializePrefab(handle.Result, PrefabId, CollectionId);
+                        else
+                            Debug.LogError("Fail Getting NetworkObject from addressable");
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return Task.CompletedTask;
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"PrefabId={PrefabId}\tIsAddressable={IsAddressable}\tStatus={status}\tHandleValid={handle.IsValid()}\tAssetPath={AssetPath}";
+        }
+
+        public void Validate()
+        {
+            EditorValidate();
+        }
+
+        private void EditorValidate()
+        {
+#if UNITY_EDITOR
+            if (NetworkObjectPrefab == null)
+                throw new NullReferenceException("NetworkObjectPrefab is not exist");
+            AssetPath = AssetDatabase.GetAssetPath(NetworkObjectPrefab);
+            string guid = AssetDatabase.AssetPathToGUID(AssetPath, AssetPathToGUIDOptions.OnlyExistingAssets);
+            PrefabId = AssetPath.GetStableHashU16();
+            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null)
+                throw new NullReferenceException($"Attempting to access default Addressables Settings, but no settings file exists.  Open 'Window/Asset Management/Addressables/Groups' for more info.");
+            AddressableAssetEntry addressableAssetEntry = settings.FindAssetEntry(guid, true);
+            IsAddressable = addressableAssetEntry != null;
+
+            Guid = guid;
+            if (IsAddressable)
+                AssetReference = new AssetReferenceNetworkObject(guid);
+            //Debug.Log($"{PrefabId} {AssetPath}");
+            EditorUtility.SetDirty(NetworkObjectPrefab);
+
+
+            //Debug.Log($"Result {NonAddressableNob.PrefabId} {AssetPath}");
+#endif
+        }
+
+        public AsyncOperationHandle<NetworkObject> GetAsyncOperationHandle() => IsAddressable ? handle : throw new InvalidOperationException("This Entry is not addressable or loading is not begin");
     }
 
     [Serializable]
