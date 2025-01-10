@@ -184,6 +184,7 @@ namespace FishNet.Addressable.Runtime
                     {
                         assetReferences.RemoveAt(i);
                         i--;
+                        UnityEditor.EditorUtility.SetDirty(prefabHandlerInstance);
                     }
                 }
                 foreach (NetworkObject nob in defaultPrefabObjects.Prefabs)
@@ -197,12 +198,15 @@ namespace FishNet.Addressable.Runtime
                         assetReferences.Add(item);
                         UnityEditor.EditorUtility.SetDirty(prefabHandlerInstance);
                     }
-                    item.Validate();
+                    item.Validate(out bool isDirty);
+                    if (isDirty)
+                        UnityEditor.EditorUtility.SetDirty(prefabHandlerInstance);
                 }
                 foreach (EntryWrapper item in assetReferences)
                 {
                     AssetDatabase.SaveAssetIfDirty(item.NetworkObjectPrefab);
                 }
+                AssetDatabase.SaveAssetIfDirty(prefabHandlerInstance);
                 Debug.Log($"{nameof(AddressableNetworkPrefabHandler)} found {assetReferences.Count} prefabs");
             }
             catch
@@ -244,13 +248,7 @@ namespace FishNet.Addressable.Runtime
             if (EditorApplication.isCompiling)
                 return false;
 
-            if (EditorApplication.isUpdating)
-                return false;
-
-            if (EditorApplication.isPlayingOrWillChangePlaymode)
-                return false;
-
-            return true;
+            return EditorApplication.isUpdating ? false : !EditorApplication.isPlayingOrWillChangePlaymode;
 #else
             return false;
 #endif
@@ -332,33 +330,54 @@ namespace FishNet.Addressable.Runtime
             return $"PrefabId={PrefabId}\tIsAddressable={IsAddressable}\tStatus={status}\tHandleValid={handle.IsValid()}\tAssetPath={AssetPath}";
         }
 
-        public void Validate()
+        public void Validate(out bool isDirty)
         {
-            EditorValidate();
+            EditorValidate(out isDirty);
         }
 
-        private void EditorValidate()
+        private void EditorValidate(out bool isDirty)
         {
+            isDirty = false;
 #if UNITY_EDITOR
             if (NetworkObjectPrefab == null)
                 throw new NullReferenceException("NetworkObjectPrefab is not exist");
+            string tempAssetPath = AssetPath;
             AssetPath = AssetDatabase.GetAssetPath(NetworkObjectPrefab);
-            string guid = AssetDatabase.AssetPathToGUID(AssetPath, AssetPathToGUIDOptions.OnlyExistingAssets);
+            isDirty |= AssetPath != tempAssetPath;
+
+            ushort tempPrefabId = PrefabId;
             PrefabId = AssetPath.GetStableHashU16();
+            isDirty |= PrefabId != tempPrefabId;
+
             AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
             if (settings == null)
                 throw new NullReferenceException($"Attempting to access default Addressables Settings, but no settings file exists.  Open 'Window/Asset Management/Addressables/Groups' for more info.");
+
+            string guid = AssetDatabase.AssetPathToGUID(AssetPath, AssetPathToGUIDOptions.OnlyExistingAssets);
             AddressableAssetEntry addressableAssetEntry = settings.FindAssetEntry(guid, true);
+
+            bool tempIsAddressable = IsAddressable;
             IsAddressable = addressableAssetEntry != null;
+            isDirty |= IsAddressable != tempIsAddressable;
 
+            string tempGuid = Guid;
             Guid = guid;
+            isDirty |= Guid != tempGuid;
+
             if (IsAddressable)
-                AssetReference = new AssetReferenceNetworkObject(guid);
-            //Debug.Log($"{PrefabId} {AssetPath}");
-            EditorUtility.SetDirty(NetworkObjectPrefab);
+            {
+                if (AssetReference == null || AssetReference.AssetGUID != guid)
+                {
+                    AssetReference = new AssetReferenceNetworkObject(guid);
+                    isDirty |= true;
+                }
+            }
+            if (isDirty)
+                EditorUtility.SetDirty(NetworkObjectPrefab);
 
+            status = AsyncOperationStatus.None;
 
-            //Debug.Log($"Result {NonAddressableNob.PrefabId} {AssetPath}");
+            Debug.Log($"Result isDirty={isDirty} PrefabId={PrefabId} AssetPath={AssetPath}");
 #endif
         }
 
