@@ -1,5 +1,5 @@
 ## FishNetAddressable
-The package itself is mainly for providing FishNet Networking a prefab collection that could be spawn on the network.
+The package itself is mainly for providing [FishNet Networking](https://github.com/FirstGearGames/FishNet) a prefab collection that could be spawn on the network.
 > Very easy to setup and remove your headache from having to figure out ``Missing prefab id XXXX`` error
 
 > Type safe and return correct component you want which eliminate the need of ``GetComponent``
