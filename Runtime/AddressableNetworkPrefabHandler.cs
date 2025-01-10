@@ -294,7 +294,7 @@ namespace FishNet.Addressable.Runtime
         {
             try
             {
-                Debug.Log($"PreloadAddressableAsset {PrefabId} {AssetPath}");
+                Debug.Log($"PreloadAddressableAsset PrefabId={PrefabId} AssetPath={AssetPath}");
                 if (!IsAddressable)
                     return Task.CompletedTask;
                 if (!handle.IsValid())
@@ -312,7 +312,7 @@ namespace FishNet.Addressable.Runtime
                         if (handle.Status == AsyncOperationStatus.Succeeded)
                             ManagedObjects.InitializePrefab(handle.Result, PrefabId, CollectionId);
                         else
-                            Debug.LogError("Fail Getting NetworkObject from addressable");
+                            Debug.LogError("Failed Getting NetworkObject from addressable");
                     }
                     catch (Exception e)
                     {
