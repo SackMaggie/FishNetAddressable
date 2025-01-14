@@ -103,6 +103,36 @@ namespace FishNet.Addressable.Runtime
         }
 
         /// <summary>
+        /// Please use <see cref="SpawnAddressableAsync{T}(ServerManager, NetworkedComponentReference{T}, NetworkConnection, Scene)"/> instead
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="serverManager"></param>
+        /// <param name="componentReference"></param>
+        /// <param name="ownerConnection"></param>
+        /// <param name="scene"></param>
+        /// <returns></returns>
+        [Obsolete("Use SpawnAddressableAsync<T> Instead", true)]
+        public static AsyncOperationHandle<T> Spawn<T>(this ServerManager serverManager, NetworkedComponentReference<T> componentReference, NetworkConnection ownerConnection = null, Scene scene = default) where T : NetworkBehaviour
+        {
+            throw new NotImplementedException("Use SpawnAddressableAsync instead");
+        }
+
+        /// <summary>
+        /// Please use <see cref="SpawnAddressableAsync{T}(ServerManager, NetworkedComponentReference{T}, NetworkConnection, Scene)"/> instead
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="networkBehaviour"></param>
+        /// <param name="componentReference"></param>
+        /// <param name="ownerConnection"></param>
+        /// <param name="scene"></param>
+        /// <returns></returns>
+        [Obsolete("Use SpawnAddressableAsync<T> Instead", true)]
+        public static AsyncOperationHandle<T> Spawn<T>(this NetworkBehaviour networkBehaviour, ComponentReference<T> componentReference, NetworkConnection ownerConnection = null, Scene scene = default) where T : NetworkBehaviour
+        {
+            throw new NotImplementedException("Use SpawnAddressableAsync instead");
+        }
+
+        /// <summary>
         /// Instantiate a <see cref="NetworkObject"/> and spawn it on <see cref="ServerManager"/>
         /// If <paramref name="serverManager"/> is not specified a default <see cref="ServerManager"/> from <see cref="InstanceFinder.ServerManager"/> will be used
         /// </summary>
@@ -192,6 +222,21 @@ namespace FishNet.Addressable.Runtime
         public static AsyncOperationHandle<T> SpawnAddressableAsync<T>(this ServerManager serverManager, ComponentReference<T> componentReference, NetworkConnection ownerConnection = null, Scene scene = default) where T : NetworkBehaviour
         {
             return InstantiateAsync(componentReference, ownerConnection, scene, serverManager);
+        }
+
+        /// <summary>
+        /// Please use <see cref="SpawnAddressableAsync{T}(ServerManager, ComponentReference{T}, NetworkConnection, Scene)"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="serverManager"></param>
+        /// <param name="componentReference"></param>
+        /// <param name="ownerConnection"></param>
+        /// <param name="scene"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static AsyncOperationHandle<T> Spawn<T>(this ServerManager serverManager, ComponentReference<T> componentReference, NetworkConnection ownerConnection = null, Scene scene = default)
+        {
+            throw new NotImplementedException("Use SpawnAddressableAsync instead");
         }
     }
 }

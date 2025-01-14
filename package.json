@@ -1,17 +1,18 @@
 {
   "name": "com.sackmaggie.fishnetaddressable",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "displayName": "FishNet Addressable",
-  "description": "",
+  "description": "A complete Addressable setup ready to use for FishNet Networking.\nBy integrating you project into addressable system allow you to have better control of your assets and ability to patching your game post launch\nFor usage samples, see https://github.com/SackMaggie/FishNetAddressableSample",
   "unity": "2021.3",
-  "documentationUrl": "https://fish-networking.gitbook.io/docs/",
+  "documentationUrl": "https://github.com/SackMaggie/FishNetAddressable/",
   "licensesUrl": "https://github.com/SackMaggie/FishNetAddressable/blob/master/LICENSE.txt",
   "license": "See LICENSE.txt file",
   "keywords": [
     "FishNetworking",
     "Networking",
     "FishNet",
-    "Unity Networking"
+    "Unity Networking",
+    "Addressable"
   ],
   "author": {
     "name": "SackMaggie",
