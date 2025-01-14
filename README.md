@@ -36,9 +36,10 @@ Now your got your class and make a prefab ready to use on the network
 ```cs
 // Simple but error prone use-case of addressable
 AsyncOperationHandle<GameObject> asyncOperationHandle = Addressables.InstantiateAsync("Prefabs/AmazingCube.prefab"); // what if path/key/name get changed? -> ERROR
-GameObject yourGameObject = await asyncOperationHandle.Task;`
+GameObject yourGameObject = await asyncOperationHandle.Task;
 ServerManager.Spawn(yourGameObject);
-AmazingCube amazingCube = yourGameObject.GetComponent<AmazingCube>(); // Have to use GetComponent and that's a prone to error since there's no promise that object will contain your AmazingCube class
+AmazingCube amazingCube = yourGameObject.GetComponent<AmazingCube>();
+// You will have to use GetComponent here and that's a prone to error since there's no promise that object will contain your AmazingCube class
 // Do stuff
 ```
 My prefered way
