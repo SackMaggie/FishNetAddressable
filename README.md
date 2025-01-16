@@ -1,4 +1,4 @@
-## FishNetAddressable
+# FishNetAddressable
 The package itself is mainly for providing [FishNet Networking](https://github.com/FirstGearGames/FishNet) a prefab collection that could be spawn on the network.
 > Very easy to setup and remove your headache from having to figure out ``Missing prefab id XXXX`` error
 
@@ -6,7 +6,7 @@ The package itself is mainly for providing [FishNet Networking](https://github.c
 
 > Zero use of ambiguous and error prone of using string as a key ``Use GUID directly from Unity`` instead
 
-# Installing
+## Installing
 The package can be easily installed via Unity package manager
 ```
 https://github.com/SackMaggie/FishNetAddressable.git
@@ -15,11 +15,16 @@ https://github.com/SackMaggie/FishNetAddressable.git
 2. Add new package using plus icon on the top left
 3. Select ``Add package from Git URL...``
 4. Enter the git path above
-# Sample
+## Sample
 You could clone the sample project on this repo
 > https://github.com/SackMaggie/FishNetAddressableSample
 
-# Usecase
+## Setup
+A quick setup is located at `Tools/Fish-Networking/Addressable/Setup` <br>
+To setup correctly open your scene and select your fishnet NetworkManager gameobject, then click the Setup from the menu<br>
+A new prefab handler will be create and assign to your SpawnablePrefabs, Scene handler for addressable will also be added too
+
+## Usecase
 So you want to instantiate a networked adressable prefab object with a simple class in it ?
 ```cs
 //Your typical NetworkBehaviour class
